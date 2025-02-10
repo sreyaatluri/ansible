@@ -1,0 +1,22 @@
+- name: Remove Web Server
+  hosts: webservers
+  become: yes
+  tasks:
+
+    - name: Stop Apache
+      systemd:
+        name: apache2
+        state: stopped
+        enabled: no
+
+    - name: Uninstall Apache
+      apt:
+        name: apache2
+        state: absent
+
+    - name: Remove HTML file
+      file:
+        path: /var/www/html/index.html
+        state: absent
+
+    
