@@ -1,0 +1,52 @@
+---
+- name: Deploy Web Server
+  hosts: webservers
+  become: true
+  tasks:
+    - name: Install Apache (Ubuntu)
+      ansible.builtin.apt:
+        name: apache2
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Start and enable Apache
+      ansible.builtin.service:
+        name: apache2
+        state: started
+        enabled: true
+
+    - name: Allow Apache on port 8080
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: 8080
+        jump: ACCEPT
+      become: true
+
+    - name: Create custom HTML page
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+          <head><title>Hello World</title></head>
+          <body><h1>Hello World from SJSU-{{ inventory_hostname[-1] }}</h1></body>
+          </html>
+        mode: '0644'
+
+    - name: Change Apache listen port to 8080
+      ansible.builtin.lineinfile:
+        path: /etc/apache2/ports.conf
+        regexp: '^Listen 80'
+        line: 'Listen 8080'
+
+    - name: Update Apache VirtualHost
+      ansible.builtin.lineinfile:
+        path: /etc/apache2/sites-available/000-default.conf
+        regexp: '^<VirtualHost \*:80>'
+        line: '<VirtualHost *:8080>'
+
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+

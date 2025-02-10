@@ -1,0 +1,41 @@
+---
+- name: Deploy Web Server
+  hosts: webservers
+  become: true
+  tasks:
+    - name: Install Apache (httpd)
+      ansible.builtin.yum:
+        name: httpd
+        state: present
+
+    - name: Start and enable Apache
+      ansible.builtin.service:
+        name: httpd
+        state: started
+        enabled: true
+
+    - name: Allow Apache on port 8080
+      ansible.builtin.shell: sudo firewall-cmd --permanent --add-port=8080/tcp && sudo firewall-cmd --reload
+      when: ansible_distribution == "Amazon"
+
+    - name: Create custom HTML page
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+          <head><title>Hello World</title></head>
+          <body><h1>Hello World from SJSU-{{ inventory_hostname[-1] }}</h1></body>
+          </html>
+        mode: '0644'
+
+    - name: Change Apache listen port to 8080
+      ansible.builtin.lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^Listen 80'
+        line: 'Listen 8080'
+
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: httpd
+        state: restarted
+
